@@ -1,0 +1,8 @@
+To dos:
+  - Make a lablist.txt file that is updated on adding or editting a lab. This will mean that the HTAs won't have to open excel every time they start. All the HTAs will need to have their selectLabs functions updated to read from the text file rather than Excel.
+  - Add frame to the big image (for some reason word macros don't record this? wtf?)
+  - Add error catch to close excel (HIGH PRIORITY. Is really annoying having to kill invisible instances of Excel)
+  - Change file handler in AddCRC.hta to js + html input type=file
+  - Change all js in AddCRC.hta to vbscript
+  - Make a separate script file for the selectLabs function as it is used in all three HTAs so it would make more sense to have a single version of it in a vbs that all three import and use than it  fill in function that takes the document and a div id as arguments. (Or possibly just takes the entire body as a String and then returns a body  string to replace the existing).
+  - Prompt user if user tries adding a CRC for a quarter more than one after the current.

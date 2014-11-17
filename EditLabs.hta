@@ -1,0 +1,213 @@
+<head>
+<title>Edit Labs</title>
+<HTA:APPLICATION 
+    APPLICATIONNAME="Edit Labs"
+    SCROLL="no"
+    MAXIMIZEBUTTON="no"
+    SINGLEINSTANCE="yes"
+    BORDER="thin" >
+
+<style>
+body {
+    background-color:lightgrey;
+    margin-top: 5px;
+    margin-bottom: 0px;
+}
+
+.col {
+    width: 50%;
+    float: left;
+}
+.title {
+    font-weight: bold;
+    margin: 0px;
+    margin-bottom: 5px;
+    line-height: 1;
+    font-size: 20;
+}
+#editLabs {
+    margin-bottom: 0px;
+}
+#addLab {
+    margin-bottom: 0px;
+}
+#addLabChoices {
+    margin-bottom: 10px;
+}
+</style>
+</head>
+
+<!-- Loads in the EditLabs.vbs vbscript, allowing us to use the functions defined there. -->
+<script language="VBScript" src="res/EditLabs.vbs"></script>
+<script type="text/vbscript">
+	' Resizes the window when it first loads
+	Sub Window_onLoad
+		window.resizeTo 350,270
+        
+        FillLabList("labChoiceDiv")
+        FillLabList("copyLabChoiceDiv")
+        toggleCopyLab
+
+	End Sub
+    
+    ' Make sure the HTA closes cleanly
+    Sub ExitHTA
+        self.close()
+    End Sub
+    
+    Sub FillLabList(divID)
+        ' Open the Excel doc in background
+        pwd = CreateObject("WScript.shell").CurrentDirectory
+        ePath = pwd & "\res\Archives.xlsx"
+        selectId = Mid(divID, 1, len(divID)-3)
+        
+        Set eObj = CreateObject("Excel.Application")
+        eObj.Workbooks.Open(ePath)
+        
+        ' Get the total number of sheets in the Excel Doc
+        sheetCnt = eObj.Worksheets.Count
+        
+        ' html = "<label for="""&selectId&"""><b>Select Lab</b></label>"
+        html = html & "<select id="""&selectId&""">"
+        
+        For i=1 To sheetCnt
+            lab = eObj.Sheets(i).Name
+            html = html & "<option value="""&lab&""">"&lab&"</option>"
+        Next
+        html = html & "</select>"
+
+        ' Get the element we'll be adding to. We have to wrap the Select
+        ' in a Div rather than address it directly because IE sucks.
+        ' http://support.microsoft.com/kb/276228
+        set e = window.document.getElementById(divID)
+        e.innerHTML = html
+
+        eObj.quit
+    End Sub
+    
+    Sub CallChangeName
+        set e = window.document.getElementById("labChoice")
+        lab = e.options(e.selectedIndex).value
+        
+        ChangeLabName(lab)
+        
+        FillLabList("labChoiceDiv")
+        FillLabList("copyLabChoiceDiv")
+        toggleCopyLab
+    End Sub
+    
+    Sub CallDeleteLab
+        set e = window.document.getElementById("labChoice")
+        lab = e.options(e.selectedIndex).value
+        
+        DeleteLab(lab)
+        
+        FillLabList("labChoiceDiv")
+        FillLabList("copyLabChoiceDiv")
+        toggleCopyLab
+    End Sub
+    
+    Sub toggleCopyLab
+        Set e = window.document.getElementById("copyLabChoice")
+        
+        If e.disabled = True Then
+            e.disabled = False
+        Else
+            e.disabled = True
+        End If 
+    End Sub
+    
+    Sub callAddLab
+        existingLab = ""
+        copyLab = False
+        lab = window.document.getElementById("labName").value
+        Set e = window.document.getElementById("copyLabChoice")
+        
+        If len(lab) = 0 Then
+            MsgBox "Please give the new lab a name before adding it."
+            Exit Sub
+        End If
+        
+        ' Set up a regex to check for invalid characters. These characters are special characters in Excel and so can't be used in sheet titles
+        Set re = New RegExp
+        re.Pattern = "[\?\]\[\*\\/:]"
+        re.Global = True
+        
+        If len(lab) > 31 Then
+            MsgBox "Please try a different lab name. Lab names cannot be longer than 31 characters.",48,"Invalid Lab Name"
+            Exit Sub
+        ElseIf re.Test(lab) Then
+            MsgBox "Please try a different lab name. Lab names cannot contain the following symbols: [ ] * ? / \ :" & _
+                    Chr(13) & "For joint lab groups (e.g. Hutchison-Wellman) please use a dash - rather than a slash /.",48,"Invalid Lab Name"
+            Exit Sub
+        End If
+
+        If labExists(lab) Then
+            MsgBox "A lab with this name already exists. Please choose a different name.",48,"Name Collision"
+            Exit Sub
+        End If
+        
+        If (e.disabled = False) Then
+            existingLab = e.options(e.selectedIndex).value
+            response = MsgBox ("Would you like to create a new lab called "&lab & _
+                                "? The lab history will be populated with the existing entries from the " & _
+                                existingLab+" lab group.",36,"Add Lab Group?")
+            copyLab = True
+
+        Else
+            response = MsgBox ("Would you like to create a new lab called "+lab & _
+                                "? The lab history will be populated with template entries. You should manually " & _
+                                "fill these in.",36,"Add Lab Group?")
+        End If
+        
+        If response = 6 Then
+            addLab lab, copyLab, existingLab
+            
+            ' Update the lab lists with the new addition and update the drop down usability
+            FillLabList("labChoiceDiv")
+            FillLabList("copyLabChoiceDiv")
+            toggleCopyLab 
+        End If
+    End Sub
+</script>
+
+<body>
+<div id="editLabs">
+    <p class="title">Edit Existing Labs</p>
+    <div class="col" >
+        <label for="labChoice"><b>Select Lab</b></label>
+        <div id="labChoiceDiv">
+        </div>
+        <br />
+    </div>
+
+    <div class="col">
+        <b>Selected Lab</b><br />
+        <input id="sheetGenButton" type="button" value="Change Name" name="run_button" onClick="CallChangeName">
+        <input id="sheetGenButton" type="button" value="Delete Lab" name="run_button" onClick="CallDeleteLab">
+    </div>
+</div>
+
+<hr>
+
+<div id="addLab">
+    <div id="addLabChoices">
+        <p class="title">Add New Lab</p>
+        <div class="col">
+            <b>New Lab Name</b><br />
+            <input type="text" id="labName">
+        </div>
+        <div class="col" id="addLabDiv">
+            <input type="checkbox" id="copyLabCheckBox" onclick="toggleCopyLab">
+            <label for="copyLabCheckBox">Copy existing lab</label>
+            <div id="copyLabChoiceDiv" >
+            </div>
+        </div>
+    </div>
+
+    <div class="col"></div>
+    <div class="col">
+        <input id="addLabButton" type="button" value="Add Lab" name="run_button" onClick="callAddLab">
+    </div>
+</div>
+</body>

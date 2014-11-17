@@ -1,0 +1,257 @@
+<head>
+<title>Add CRC</title>
+<HTA:APPLICATION 
+    APPLICATIONNAME="Add CRC"
+    SCROLL="no"
+    MAXIMIZEBUTTON="no"
+    SINGLEINSTANCE="yes"
+    BORDER="thin"
+>
+<style>
+body {
+    background-color:lightgrey;
+    margin-bottom: 0px;
+        margin-right: 0px;
+
+}
+.col {
+    width: 50%;
+    float: left;
+}
+</style>
+</head>
+
+<!-- Loads in the WordGen and PhotoFile vbscripts -->
+<script type="text/vbscript" src="res/AddCRC.vbs"></script>
+
+<script type="text/vbscript">
+	' Resizes the window when it first loads
+	Sub Window_onLoad
+		window.resizeTo 375,410
+        
+        FillLabList("labChoiceDiv")
+	End Sub
+    
+    ' Make sure the HTA closes cleanly
+    Sub ExitHTA
+        self.close()
+    End Sub
+    
+    Sub FillLabList(divID)
+        ' Open the Excel doc in background
+        pwd = CreateObject("WScript.shell").CurrentDirectory
+        ePath = pwd & "\res\Archives.xlsx"
+        Set eObj = CreateObject("Excel.Application")
+        eObj.Workbooks.Open(ePath)
+        
+        ' Get the total number of sheets in the Excel Doc
+        sheetCnt = eObj.Worksheets.Count
+        
+        html = "<label for=""labChoice""><b>Select Lab</b><br /></label>"
+        html = html & "<select id=""labChoice"">"
+        
+        For i=1 To sheetCnt
+            lab = eObj.Sheets(i).Name
+            html = html & "<option value="""&lab&""">"&lab&"</option>"
+        Next
+        html = html & "</select>"
+
+        ' Get the element we'll be adding to. We have to wrap the Select
+        ' in a Div rather than address it directly because IE sucks.
+        ' http://support.microsoft.com/kb/276228
+        set e = window.document.getElementById(divID)
+        e.innerHTML = html
+
+        eObj.quit
+    End Sub
+</script>
+
+<script type="text/javascript">
+// TODO: Convert all the below to vbscript. The below is the only remaining Javascript. While there isn't anything inherently bad about using both,
+// I'd prefer to have it standardized to just one language.
+function setDate() {
+    // Create a date object we can use to get the current month and year
+    var d = new Date();
+    
+    // Subtract 2014 from the current year to get the index as 2011 is the smallest value (and thus has index 0)
+    document.getElementById("yearChoice").selectedIndex = (d.getFullYear()-2011);
+
+    switch(d.getMonth()) {
+        // Winter Quarter
+        case 0: case 1: case 2:
+            document.getElementById("quarterChoice").selectedIndex = 1
+            break;
+             
+        // Spring/Summer Quarter
+        case 3: case 4: case 5: case 6: case 7:
+            document.getElementById("quarterChoice").selectedIndex = 2
+            break;
+        
+        // Fall Quarter
+        case 8:  case 9: case 10: case 11:
+            document.getElementById("quarterChoice").selectedIndex = 0
+            break;
+    }
+}
+
+function newPhoto() {
+    // Opens a file dialogue and returns the name of the chosen file. Defined in PhotoFile.vbs
+    var fileName = ChooseFile();
+    if (fileName) {
+        document.getElementById("photoFile").innerHTML = fileName;
+    }
+}
+
+function oldPhoto() {
+    // Find and extract the name of the CRC
+    var first = document.getElementById("firstName").value;
+    var last = document.getElementById("lastName").value;
+    var name = first.concat(' ' + last);
+    
+    // Throws an alert if the first or last variables are empty
+    if (!first || !last) {
+        alert("Please enter both a first and last name")
+    } else {
+        // Checks the Excel workbook for the given CRC's name and returns the existing photo file name if found
+        var fileName = FindPhoto(name);
+        
+        // Checks if a file was found
+        if (fileName == "NONE") {
+            alert("No existing or past CRC of the Quarter entry found for " + name + ". Are you sure you're spelling their name correctly?");
+        } else {
+            document.getElementById("photoFile").innerHTML = fileName;
+        }
+    }
+}
+
+function toggleManualDate() {
+    if (document.getElementById("autoDate").checked == true) {
+        document.getElementById("quarterChoice").disabled = true;
+        document.getElementById("yearChoice").disabled = true;
+        setDate();
+    } else {
+        document.getElementById("quarterChoice").disabled = false;
+        document.getElementById("yearChoice").disabled = false;
+    }
+}
+
+function callAddToExcel() {
+    // Find and extract the name
+    var first = document.getElementById("firstName").value;
+    var last = document.getElementById("lastName").value;
+    var name = first.concat(' ' + last);
+    
+    // Find and extract the photo file name
+    var photo = document.getElementById("photoFile").innerHTML
+    
+    // Find and extract the lab selection
+    var e = document.getElementById("labChoice");
+    var lab = e.options[e.selectedIndex].value; 
+    
+    // Find and extract the year selection
+    e = document.getElementById("yearChoice");
+    var year = e.options[e.selectedIndex].value;
+    
+    // Find and extract the quarter selection
+    e = document.getElementById("quarterChoice");
+    var quarter = e.options[e.selectedIndex].value;
+    
+    // Concatenate the year and quarter selections to get the formatted awardDate
+    awardDate = year+quarter
+    
+    // Only proceeds if a name has been entered and a photo selected
+    if (first && last && photo != "No photo chosen!") {
+
+        // Calls the WordGen sub defined in AddCRCScripts.vbs
+        AddCRC(name, photo, lab, awardDate);
+          
+        // If Hutch/Wellman was chosen, also add the CRC to the Hutchison Excel sheet
+        if (lab == "Wellman") {
+            AddCRC(name, photo, "Hutchison", year, quarter);
+        }
+        document.getElementById("CRCinfo").reset();
+    } else {
+        alert("One or more fields not completed. Verify you've entered a first and last name and selected a photo");
+    }
+}
+</script>
+
+
+<body style="margin: 5px;" onload="toggleManualDate()">
+<form id="CRCinfo" style="display: inline;">
+<div class="col">
+    <b>Employee Name</b><br />
+    <label for="firstName">First Name</label>
+    <input type="text" id="firstName">
+</div>
+<div class="col">
+    <br />
+    <label for="lastName">Last Name</label>
+    <input type="text" id="lastName">
+</div>
+
+<br />
+<br />
+
+<b>Employee Portrait:</b> <i><p style="display: inline;" id="photoFile">No photo chosen!</p></i><br />
+<div class="col">
+    <label for="newPhotoButton">Choose new picture</label>
+    <input type="button" value="New Photo" name="new_photo" id="newPhotoButton" onClick="javascript: newPhoto();">
+</div>
+<div class="col">
+    <label for="checkForPhoto">Use existing picture</label>
+    <input type="button" value="Check for existing" id="checkForPhoto" onClick="javascript: oldPhoto();">
+</div>
+
+<br />
+<br />
+
+<div>
+    <div class="col" id="LabChoiceDiv">
+
+    </div>
+
+    <div class="col">
+    </form>
+    <input type="checkbox" id="autoDate" onclick="toggleManualDate()" checked>
+    Use current year and quarter
+    <form id="CRCinfo" style="display: inline;">
+    </div>
+</div>
+
+<br />
+<div>
+    <div class="col">
+    <b>Choose Quarter</b><br />
+        <select id="quarterChoice" style="width:100px">
+            <option value="3">Fall</option>
+            <option value="1">Winter</option>
+            <option value="2">Spring</option>
+        </select>
+    </div>
+
+    <div class="col">
+        <b>Choose Year</b><br />
+        <select id="yearChoice" style="width:100px">
+            <!--If you change or remove the oldest year (2011 at the moment), make sure to also adjust the offset in the setDate js function accordingly.-->
+            <option value="2011">2011</option>
+            <option value="2012">2012</option>
+            <option value="2013">2013</option>
+            <option value="2014">2014</option>
+            <option value="2015">2015</option>
+            <option value="2016">2016</option>
+            <option value="2017">2017</option>
+            <option value="2018">2018</option>
+            <option value="2019">2019</option>
+        </select>
+    </div>
+</div>
+</form>
+
+<br />
+<br />
+
+<div style="text-align:center; border:1px solid black; padding:10px; margin: 0px 70px 0px 70px">
+    <input type="button" value="Add Employee" name="run_button" onClick="javascript: callAddToExcel();">
+</div>
+</body>

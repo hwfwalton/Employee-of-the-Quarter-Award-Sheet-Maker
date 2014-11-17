@@ -1,0 +1,111 @@
+<head>
+<title>CRC of the Quarter</title>
+<HTA:APPLICATION 
+    APPLICATIONNAME="CRC of the Quarter"
+    SCROLL="no"
+    MAXIMIZEBUTTON="no"
+    SINGLEINSTANCE="yes"
+    BORDER="thin" >
+
+<style>
+body {
+    background-color:lightgrey;
+    margin-bottom: 0px;
+}
+.col {
+    width: 50%;
+    float: left;
+    height: 40px;
+}
+
+#responseText {
+    width: 40%;
+    float: left;
+}
+
+#newCRCButton {
+	width: 91%;
+}
+
+
+</style>
+
+</head>
+
+<!-- Loads in the WordGen.vbs vbscript, allowing us to use the functions defined there. -->
+<script language="VBScript" src="res/WordGen.vbs"></script>
+<script type="text/vbscript">
+	' Resizes the window when it first loads
+	Sub Window_onLoad
+		window.resizeTo 350,160
+        
+        FillLabList("labChoiceDiv")
+	End Sub
+    
+    ' Make sure the HTA closes cleanly
+    Sub ExitHTA
+        self.close()
+    End Sub
+    
+    Sub FillLabList(divID)
+        ' Open the Excel doc in background
+        pwd = CreateObject("WScript.shell").CurrentDirectory
+        ePath = pwd & "\res\Archives.xlsx"
+        Set eObj = CreateObject("Excel.Application")
+        eObj.Workbooks.Open(ePath)
+        
+        ' Get the total number of sheets in the Excel Doc
+        sheetCnt = eObj.Worksheets.Count
+        
+        html = "<label for=""labChoice""><b>Select Lab</b><br /><br /></label>"
+        html = html & "<select id=""labChoice"">"
+        
+        For i=1 To sheetCnt
+            lab = eObj.Sheets(i).Name
+            html = html & "<option value="""&lab&""">"&lab&"</option>"
+        Next
+        html = html & "</select>"
+
+        ' Get the element we'll be adding to. We have to wrap the Select
+        ' in a Div rather than address it directly because IE sucks.
+        ' http://support.microsoft.com/kb/276228
+        set e = window.document.getElementById(divID)
+        e.innerHTML = html
+
+        eObj.quit
+    End Sub
+    
+    Sub callAddCRC
+        Set objShell = CreateObject("WScript.Shell")
+        objShell.Run("AddCRC.hta")
+    End Sub
+    
+    Sub callWordGen
+        set e = window.document.getElementById("labChoice")
+        lab = e.options(e.selectedIndex).value
+        
+        window.document.getElementById("sheetGenButton").disabled = true
+        WordGen(lab)
+        window.document.getElementById("sheetGenButton").disabled = false
+        window.document.getElementById("responseText").innerHTML = "<i>" & lab & " sheet generated!</i>" 
+    End Sub 
+</script>
+
+<body>
+<div>
+    <!--This div is filled in on load with a select tag and options based on the sheet names of the Excel archive-->
+    <div class="col" id="labChoiceDiv">
+    </div>
+    
+    <div class="col">
+	<br />
+    <input id="sheetGenButton" type="button" value="Generate Sheet" name="run_button" onClick="callWordGen">
+    <input id="newCRCButton" type="button" value="Add New Employee" name="add_button" onClick="callAddCRC">
+    </div>
+</div>
+
+<div>
+    <div id="responseText">
+    </div>
+</div>
+</body>
