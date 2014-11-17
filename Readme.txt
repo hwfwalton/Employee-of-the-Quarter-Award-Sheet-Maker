@@ -9,6 +9,8 @@ from an Excel book. The GUI is an HTA that uses a combination of more VBScript
 and some Javascript to provide tools to add new employees to the archives. The
 Word template and final generated sheets are based on the formerly used Adobe
 InDesign sheets which can still be found buried in the depths of CLMDoc.
+Pictures of program:
+http://imgur.com/a/iWj5E
 
 Included Files
 =======================
